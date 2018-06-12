@@ -20,10 +20,17 @@ service: testfunc
 provider:
   name: aws
   runtime: go1.x
-
-# you can overwrite defaults here
-  stage: dev
+  stage: ${opt:stage, self:custom.defaultStage}
   region: ap-northeast-1
+custom:
+  defaultStage: dev
+  table:
+    dev:
+      dataTable: dev-datatable
+      sequenceTable: dev-sequenceTable
+    prod:
+      dataTable: prod-datatable
+      sequenceTable: prod-sequenceTable
 
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
@@ -72,6 +79,41 @@ functions:
           method: get
           authorizer:
             arn: arn:aws:cognito-idp:ap-northeast-1:982976011432:userpool/ap-northeast-1_xerpEI3kg
+resources:
+  Resources:
+    DynamoDataTable:
+      Type: 'AWS::DynamoDB::Table'
+      #DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: N
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.table.${self:provider.stage}.dataTable}
+    DynamoSequenceTable:
+      Type: 'AWS::DynamoDB::Table'
+      #DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: TableName
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: TableName
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.table.${self:provider.stage}.sequenceTable}
+  
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
