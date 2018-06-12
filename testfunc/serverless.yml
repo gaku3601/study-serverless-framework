@@ -22,15 +22,19 @@ provider:
   runtime: go1.x
   stage: ${opt:stage, self:custom.defaultStage}
   region: ap-northeast-1
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-datatable"
+
 custom:
   defaultStage: dev
   table:
     dev:
       dataTable: dev-datatable
-      sequenceTable: dev-sequenceTable
     prod:
       dataTable: prod-datatable
-      sequenceTable: prod-sequenceTable
 
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
@@ -79,6 +83,14 @@ functions:
           method: get
           authorizer:
             arn: arn:aws:cognito-idp:ap-northeast-1:982976011432:userpool/ap-northeast-1_xerpEI3kg
+  helloDynamo:
+    handler: bin/helloDynamo
+    events: # ここから4行をAPI GatewayのGETメソッドを作成するために追加
+      - http:
+          path: helloDynamo
+          method: get
+    environment:
+      DATATABLE: ${self:custom.table.${self:provider.stage}.dataTable}
 resources:
   Resources:
     DynamoDataTable:
@@ -88,7 +100,7 @@ resources:
         AttributeDefinitions:
           -
             AttributeName: id
-            AttributeType: N
+            AttributeType: S
         KeySchema:
           -
             AttributeName: id
@@ -97,23 +109,6 @@ resources:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
         TableName: ${self:custom.table.${self:provider.stage}.dataTable}
-    DynamoSequenceTable:
-      Type: 'AWS::DynamoDB::Table'
-      #DeletionPolicy: Retain
-      Properties:
-        AttributeDefinitions:
-          -
-            AttributeName: TableName
-            AttributeType: S
-        KeySchema:
-          -
-            AttributeName: TableName
-            KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-        TableName: ${self:custom.table.${self:provider.stage}.sequenceTable}
-  
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events

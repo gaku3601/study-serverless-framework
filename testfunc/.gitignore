@@ -3,3 +3,4 @@
 
 # golang output binary directory
 bin
+vendor
